@@ -1,0 +1,100 @@
+---
+title: "Prediction Assignment Writeup"
+author: "mpmartins1970"
+date: "2016/08/12"
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
+
+********************************************************************************
+
+## Executive Summary
+
+In this report, data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants are used to quantify how well they did each particular activity. The goal of this report is to predict the manner in which they did the exercise, describing how the model was built, the expected out of sample error and why the choices were made. The predict model is used to predict 20 different test cases. Using exploratory data analysis and machine learning theory, the findings showed that Random Forest has the best accuracy for this testing dataset.
+
+## Exploratory Data Analysis
+
+Loading the training and test datasets that previously have been downloaded to working directory in local machine. The datasets have 160 variables.
+
+```{r echo=TRUE}
+
+# Libraries
+library(caret)
+
+# Load the training and testing dataset
+trainingDS <- read.csv("./pml-training.csv", na.strings = c("NA","#DIV/0!"))
+testingDS <- read.csv("./pml-testing.csv", na.strings = c("NA","#DIV/0!"))
+
+```
+
+Removing all the variables containing NA values, the near zero variance (NVZ) variables and id/timestamp variables.
+
+```{r echo=TRUE}
+
+# Cleaning data
+trainingDS <- trainingDS[,colSums(is.na(trainingDS)) == 0]
+trainingDS <- trainingDS[,-nearZeroVar(trainingDS)]
+trainingDS <- trainingDS[,-c(1:7)]
+
+```
+
+Splitting data into a 70% training data set and a 30% testing data set to estimate the out of sample error of the predictor.
+
+```{r echo=TRUE}
+
+# Splitting data
+inTrain <- createDataPartition(y = trainingDS$classe, p = 0.70,list = F)
+training <- trainingDS[inTrain,] 
+testing <- trainingDS[-inTrain,] 
+
+```
+
+## Prediction Model Building
+
+The problem to be resolved is a classification one, so, using random forest, the out of sample error should be small. Random forest is used for the training dataset using cross-validation. 
+
+```{r echo=TRUE}
+
+# Making report reproducible
+set.seed(1970)
+
+# Fitting Random Forest model
+trc5 <- trainControl(method = "cv", number = 5, allowParallel = TRUE, verbose = TRUE)
+modelRF <- train(classe~.,data = training, method = "rf", trControl = trc5, verbose = FALSE)
+modelRF$finalModel
+
+```
+
+In sequence, the fitted model generated is examined with the testing sample from the partitioned training dataset to evaluate the accuracy and estimated error of prediction.
+
+```{r echo=TRUE}
+
+# Predicting with the Random Forest Model
+predictionRF <- predict(modelRF, testing)
+confMatrixRF <- confusionMatrix(predictionRF, testing$classe)
+confMatrixRF
+
+```
+
+The accuracy of the modeling method above is 99,4% with a small out of sample error. As a consequence, it could be expected almost all of the submitted test cases will be correct.
+
+## Predicting with the Testing Data
+
+Applying the Random Forest model to predict the 20 test cases provided (testing dataset) as shown below.
+
+```{r echo=TRUE}
+
+# Predicting using pml-testing.csv data
+predictTestingDS <- predict(modelRF, newdata = testingDS)
+predictTestingDS
+
+```
+
+## Conclusions
+
+From these data, after validation in the prediction quizz, the goal was accomplished since all the submitted test cases were correct.
+
+
+********************************************************************************
